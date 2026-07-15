@@ -1,0 +1,35 @@
+[
+  {
+    "filename": "invoice-approved.png",
+    "sha256": "45cd833c41e8908e7fc50c9e197bdb953e5e6c366ee9fa64c16286f97cfff9e2",
+    "extraction": {
+      "invoice_number": "INV-OK-001",
+      "supplier_name": "Proveedor Demo S.A.",
+      "tax_id": "1790012345001",
+      "purchase_order_number": "PO-DEMO-1500",
+      "total": 1500
+    }
+  },
+  {
+    "filename": "invoice-mismatch.png",
+    "sha256": "40c4b548dd5c72763d514bb89c7bf4462f6e95de3607c3411e91af1313238d11",
+    "extraction": {
+      "invoice_number": "INV-RISK-001",
+      "supplier_name": "Proveedor Demo S.A.",
+      "tax_id": "1790012345001",
+      "purchase_order_number": "PO-DEMO-1500",
+      "total": 2300
+    }
+  },
+  {
+    "filename": "invoice-duplicate.png",
+    "sha256": "c5cc473c27a70e50ee2c633a3fc2a4f8fb20983885235cb88170764596bd728c",
+    "extraction": {
+      "invoice_number": "INV-DUP-001",
+      "supplier_name": "Proveedor Demo S.A.",
+      "tax_id": "1790012345001",
+      "purchase_order_number": "PO-DEMO-1500",
+      "total": 1500
+    }
+  }
+]

@@ -1,0 +1,34 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "invoice-extraction.schema.json",
+  "title": "InvoiceExtractionAdapterResult",
+  "description": "Objeto enriquecido por el adaptador después de recibir los cinco campos estructurados de OpenAI.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "invoice_number",
+    "supplier_name",
+    "tax_id",
+    "purchase_order_number",
+    "total",
+    "invalid_fields",
+    "extraction_source",
+    "fallback_reason"
+  ],
+  "properties": {
+    "invoice_number": { "type": ["string", "null"], "minLength": 1, "pattern": ".*\\S.*", "description": "Se valida después de trim; vacío o solo espacios es inválido." },
+    "supplier_name": { "type": ["string", "null"], "minLength": 1, "pattern": ".*\\S.*", "description": "Se valida después de trim; vacío o solo espacios es inválido." },
+    "tax_id": { "type": ["string", "null"], "minLength": 1, "pattern": ".*\\S.*", "description": "Se valida después de trim; vacío o solo espacios es inválido." },
+    "purchase_order_number": { "type": ["string", "null"], "minLength": 1, "pattern": ".*\\S.*", "description": "Se valida después de trim; vacío o solo espacios es inválido." },
+    "total": { "type": ["number", "null"], "minimum": 0 },
+    "invalid_fields": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "enum": ["invoice_number", "supplier_name", "tax_id", "purchase_order_number", "total"]
+      }
+    },
+    "extraction_source": { "enum": ["OPENAI", "FIXTURE_FALLBACK"] },
+    "fallback_reason": { "type": ["string", "null"] }
+  }
+}

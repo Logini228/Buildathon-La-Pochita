@@ -1,0 +1,141 @@
+openapi: 3.1.0
+info:
+  title: InvoiceGuard AI MVP Contract
+  version: 1.0.0
+paths:
+  /api/invoices/process:
+    post:
+      summary: Process one invoice image or PDF end to end
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file: { type: string, format: binary }
+      responses:
+        '200': { description: Decision produced, content: { application/json: { schema: { $ref: '#/components/schemas/InvoiceResult' } } } }
+        '400': { $ref: '#/components/responses/Error' }
+        '503': { $ref: '#/components/responses/ServiceUnavailable' }
+  /api/invoices/{invoiceId}:
+    get:
+      summary: Get persisted invoice result
+      parameters: [{ $ref: '#/components/parameters/InvoiceId' }]
+      responses:
+        '200': { description: Persisted result, content: { application/json: { schema: { $ref: '#/components/schemas/InvoiceResult' } } } }
+        '404': { $ref: '#/components/responses/Error' }
+  /api/invoices/{invoiceId}/timeline:
+    get:
+      summary: Get persisted audit timeline
+      parameters: [{ $ref: '#/components/parameters/InvoiceId' }]
+      responses:
+        '200': { description: Timeline, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/AuditEvent' } } } } }
+  /api/invoices/{invoiceId}/extracted-data:
+    patch:
+      summary: Correct the five extracted fields and reprocess
+      parameters: [{ $ref: '#/components/parameters/InvoiceId' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CorrectionRequest' }
+      responses:
+        '200': { description: Reprocessed result, content: { application/json: { schema: { $ref: '#/components/schemas/InvoiceResult' } } } }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /api/invoices/{invoiceId}/human-decision:
+    post:
+      summary: Resolve a high-risk invoice
+      parameters: [{ $ref: '#/components/parameters/InvoiceId' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [decision, justification]
+              properties:
+                decision: { enum: [APPROVED, REJECTED] }
+                justification: { type: string, minLength: 1 }
+      responses:
+        '200': { description: Resolved result, content: { application/json: { schema: { $ref: '#/components/schemas/InvoiceResult' } } } }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+components:
+  parameters:
+    InvoiceId: { name: invoiceId, in: path, required: true, schema: { type: string, format: uuid } }
+  schemas:
+    Decision: { enum: [APPROVED, NEEDS_REVIEW_HIGH_RISK, REJECTED] }
+    ExtractedData:
+      type: object
+      required: [invoice_number, supplier_name, tax_id, purchase_order_number, total, invalid_fields, extraction_source, fallback_reason]
+      properties:
+        invoice_number: { type: [string, 'null'], minLength: 1, pattern: '.*\S.*', description: 'Validated after trim; empty or whitespace-only is invalid.' }
+        supplier_name: { type: [string, 'null'], minLength: 1, pattern: '.*\S.*', description: 'Validated after trim; empty or whitespace-only is invalid.' }
+        tax_id: { type: [string, 'null'], minLength: 1, pattern: '.*\S.*', description: 'Validated after trim; empty or whitespace-only is invalid.' }
+        purchase_order_number: { type: [string, 'null'], minLength: 1, pattern: '.*\S.*', description: 'Validated after trim; empty or whitespace-only is invalid.' }
+        total: { type: [number, 'null'], minimum: 0 }
+        invalid_fields: { type: array, items: { type: string } }
+        extraction_source: { enum: [OPENAI, FIXTURE_FALLBACK] }
+        fallback_reason: { type: [string, 'null'] }
+    ValidationResult:
+      type: object
+      required: [code, status, message]
+      properties:
+        code: { type: string }
+        status: { enum: [PASSED, FAILED, SKIPPED] }
+        message: { type: string }
+    AuditEvent:
+      type: object
+      required: [id, event_type, status, details, created_at]
+      properties:
+        id: { type: string, format: uuid }
+        event_type: { type: string }
+        status: { type: string }
+        details: { type: object, additionalProperties: true }
+        created_at: { type: string, format: date-time }
+    InvoiceResult:
+      type: object
+      required: [invoice_id, processing_id, duplicate_of_invoice_id, extracted_data, validations, automatic_decision, effective_decision, reasons]
+      properties:
+        invoice_id: { type: string, format: uuid }
+        processing_id: { type: string, format: uuid }
+        duplicate_of_invoice_id: { type: [string, 'null'], format: uuid }
+        extracted_data: { $ref: '#/components/schemas/ExtractedData' }
+        validations: { type: array, items: { $ref: '#/components/schemas/ValidationResult' } }
+        automatic_decision: { $ref: '#/components/schemas/Decision' }
+        human_decision: { oneOf: [{ enum: [APPROVED, REJECTED] }, { type: 'null' }] }
+        human_justification: { type: [string, 'null'] }
+        effective_decision: { $ref: '#/components/schemas/Decision' }
+        reasons: { type: array, items: { type: string } }
+    CorrectionRequest:
+      type: object
+      additionalProperties: false
+      required: [invoice_number, supplier_name, tax_id, purchase_order_number, total, justification]
+      properties:
+        invoice_number: { type: string, minLength: 1 }
+        supplier_name: { type: string, minLength: 1 }
+        tax_id: { type: string, minLength: 1 }
+        purchase_order_number: { type: string, minLength: 1 }
+        total: { type: number, minimum: 0 }
+        justification: { type: string, minLength: 1 }
+  responses:
+    ServiceUnavailable:
+      description: Extraction is unavailable without an exact fixture match, or required Supabase persistence is unavailable
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorPayload' }
+          examples:
+            extractionUnavailable:
+              value:
+                code: EXTRACTION_UNAVAILABLE
+                message: No fue posible extraer la factura y no existe un fixture de demostración coincidente.
+                processing_id: null
+    Error:
+      description: Request could not be completed
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorPayload' }
