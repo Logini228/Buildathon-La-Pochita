@@ -97,9 +97,7 @@ export async function extractInvoice(
     if (result) return result;
     throw new Error("El extractor principal no devolvió datos");
   } catch (error) {
-    const reason = error instanceof Error && error.message.includes("OPENAI_API_KEY")
-      ? "OpenAI no está configurado; se utilizó el fixture de demostración."
-      : "OpenAI no estuvo disponible; se utilizó el fixture de demostración.";
+    const reason = error instanceof Error ? error.message : "Fallo desconocido de OpenAI";
     const fallback = await fallbackFactory(reason).extract(file).catch(() => null);
     if (fallback) return fallback;
     throw new ExtractionUnavailableError(
