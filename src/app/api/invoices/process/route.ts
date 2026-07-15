@@ -5,7 +5,7 @@ import { SupabaseRepositoryError } from "@/lib/supabase";
 
 export const runtime = "nodejs";
 
-const acceptedTypes = new Set(["image/png", "image/jpeg", "image/svg+xml", "application/pdf"]);
+const acceptedTypes = new Set(["image/png", "image/jpeg", "application/pdf"]);
 
 export async function POST(request: Request) {
   try {
